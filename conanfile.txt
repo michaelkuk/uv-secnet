@@ -1,0 +1,12 @@
+[requires]
+OpenSSL/1.0.2l@conan/stable
+libuv/1.24.0@bincrafters/stable
+http-parser/2.8.1@bincrafters/stable
+
+[generators]
+cmake
+
+[options]
+OpenSSL:shared=True
+libuv:shared=True
+http-parser:shared=True
