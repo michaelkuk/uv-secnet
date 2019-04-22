@@ -124,10 +124,9 @@ void TCPConnection::read_cb(uv_stream_t* stream, ssize_t nread, const uv_buf_t* 
   TCPConnection* conn = static_cast<TCPConnection*>(stream->data);
 
   if (nread > 0) {
-    conn->onData(Buffer::makeShared(buf));
-  } else if (nread < 0) {
-    conn->observer->onConnectionError(std::string("Network error, bytes read: ") + std::to_string(nread));
-    free(buf->base);
+    auto data = Buffer::makeShared(buf);
+    data->len = nread;
+    conn->onData(data);
   } else {
     conn->onFinish();
     free(buf->base);
@@ -140,6 +139,7 @@ void TCPConnection::write_cb(uv_write_t* req, int status)
   writeCtx->connection->onWrite(status);
   free(writeCtx->buffer->base);
   free(writeCtx->buffer);
+  free(writeCtx);
   free(req);
 }
 

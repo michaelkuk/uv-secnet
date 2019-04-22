@@ -63,15 +63,7 @@ void TLSTransform::onConnectionOpen()
 {
   if (clientMode) {
     SSL_set_connect_state(ssl);
-    SSL_do_handshake(ssl);
-
-    int pending = BIO_ctrl_pending(out_bio);
-
-    if (pending) {
-      auto buf = Buffer::makeShared(safe_alloc<char>(pending), pending);
-      BIO_read(out_bio, buf->base, buf->len);
-      connection->write(buf);
-    }
+    handleHandshake();
   } else {
     SSL_set_accept_state(ssl);
   }
@@ -113,29 +105,57 @@ void TLSTransform::initialize(IConnectionObserver* obs)
 
 void TLSTransform::handleHandshake(buffer_ptr_t data)
 {
-  int res;
+  int written = BIO_write(in_bio, data->base, data->len);
+  handleHandshake();
+}
 
-  res = BIO_write(in_bio, data->base, data->len);
+void TLSTransform::handleHandshake()
+{
+  int res = SSL_do_handshake(ssl);
 
-  if (SSL_is_init_finished(ssl)) {
-    handshakeDone = true;
-    return observer->onConnectionOpen();
-  }
-
-  SSL_do_handshake(ssl);
-
-  int pending = BIO_ctrl_pending(out_bio);
-
-  if (pending) {
-    auto buf = Buffer::makeShared(safe_alloc<char>(pending), pending);
-    BIO_read(out_bio, buf->base, buf->len);
-    connection->write(buf);
-  }
-
-  if (SSL_is_init_finished(ssl)) {
+  if (res == 1) {
     handshakeDone = true;
     observer->onConnectionOpen();
+  } else if (res == 0) {
+    flushErrors();
+  } else {
+    int err = SSL_get_error(ssl, res);
+
+    if (err != SSL_ERROR_WANT_READ && err != SSL_ERROR_WANT_WRITE){
+      flushErrors();
+    } else {
+      flushWriteBio();
+    }
   }
+}
+
+void TLSTransform::flushErrors()
+{
+  std::string errors("");
+  unsigned long lastCode = ERR_get_error();
+
+  while (lastCode) {
+    char* msg = safe_alloc<char>(1024);
+    ERR_error_string_n(lastCode, msg, 1024);
+    errors = errors + std::string(msg) + std::string("\n");
+    lastCode = ERR_get_error();
+  }
+
+  observer->onConnectionError(errors);
+  destroy();
+}
+
+void TLSTransform::flushWriteBio()
+{
+  int pending = BIO_ctrl_pending(out_bio);
+
+  if (pending <= 0) {
+    return;
+  }
+
+  auto buf = Buffer::makeShared(safe_alloc<char>(pending), pending);
+  BIO_read(out_bio, buf->base, buf->len);
+  connection->write(buf);
 }
 
 TLSTransform::~TLSTransform()
@@ -146,4 +166,9 @@ TLSTransform::~TLSTransform()
 void TLSTransform::setClientMode()
 {
   clientMode = true;
+}
+
+void TLSTransform::setDebugMode()
+{
+  SSL_set_info_callback(ssl, info_callback);
 }

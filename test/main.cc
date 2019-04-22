@@ -80,11 +80,9 @@ void connectCb(uv_connect_t* req, int status) {
 
     auto ssl_ctx = uv_secnet::TLSContext::getDefault();
 
-    ssl_ctx->doNotValidateCert();
-
-    ctx->conn = ssl_ctx->secureClientConnection(uv_secnet::TCPConnection::create((uv_stream_t*)req->handle));
+    ctx->conn = ssl_ctx->secureClientConnection(uv_secnet::TCPConnection::create((uv_stream_t*)req->handle), "google.com");
     ctx->conn->initialize(ctx->obs);
-    // uv_timer_start(ctx->timer, timerTick, 1500, 500);
+    uv_timer_start(ctx->timer, timerTick, 1500, 500);
   }
 
   free(req);
@@ -97,6 +95,7 @@ void runLoop() {
   initCtx(ctx);
 
   uv_ip4_addr("127.0.0.1", 9999, ctx->addr);
+  // uv_ip4_addr("216.58.201.110", 443, ctx->addr);
   uv_connect_t* cReq = (uv_connect_t*)malloc(sizeof(uv_connect_t));
   cReq->data = ctx;
 

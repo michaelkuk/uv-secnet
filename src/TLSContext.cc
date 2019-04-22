@@ -37,9 +37,7 @@ TLSContext::TLSContext()
 
 void TLSContext::doNotValidateCert()
 {
-  SSL_CTX_set_verify(ssl_ctx, SSL_VERIFY_PEER, [](int ok, X509_STORE_CTX* ctx) -> int {
-    return 1;
-  });
+  SSL_CTX_set_verify(ssl_ctx, SSL_VERIFY_NONE, NULL);
 }
 
 std::shared_ptr<IConnection> TLSContext::secureClientConnection(std::shared_ptr<IConnection> conn)
