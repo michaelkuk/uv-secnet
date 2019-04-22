@@ -7,12 +7,11 @@
 #include <uv.h>
 #include <memory.h>
 #include <memory>
-#include <unistd.h>
 
 
 typedef struct {
   int counter = 0;
-  std::shared_ptr<uv_secnet::TCPConnection> conn = 0;
+  std::shared_ptr<uv_secnet::IConnection> conn = 0;
   uv_timer_t* timer = nullptr;
   uv_tcp_t* tcpHandle = nullptr;
   sockaddr_in* addr = nullptr;
@@ -69,7 +68,7 @@ void timerTick(uv_timer_t* handle) {
 
     strcpy(data, sd.c_str());
 
-    ctx->conn->write(data, sl);
+    ctx->conn->write(uv_secnet::Buffer::makeShared(data, sl+1));
   }
 }
 
@@ -77,11 +76,15 @@ void connectCb(uv_connect_t* req, int status) {
   if(status != 0) {
     std::cout << "Connection Error: " << uv_err_name(status) << std::endl;
   } else {
-    std::cout << "Connection Established" << std::endl;
     auto ctx = (secnet_ctx_t*) req->data;
 
-    ctx->conn = uv_secnet::TCPConnection::create((uv_stream_t*)req->handle, ctx->obs);
-    uv_timer_start(ctx->timer, timerTick, 500, 500);
+    auto ssl_ctx = uv_secnet::TLSContext::getDefault();
+
+    ssl_ctx->doNotValidateCert();
+
+    ctx->conn = ssl_ctx->secureClientConnection(uv_secnet::TCPConnection::create((uv_stream_t*)req->handle));
+    ctx->conn->initialize(ctx->obs);
+    // uv_timer_start(ctx->timer, timerTick, 1500, 500);
   }
 
   free(req);
@@ -93,7 +96,7 @@ void runLoop() {
 
   initCtx(ctx);
 
-  uv_ip4_addr("127.0.0.1", 8989, ctx->addr);
+  uv_ip4_addr("127.0.0.1", 9999, ctx->addr);
   uv_connect_t* cReq = (uv_connect_t*)malloc(sizeof(uv_connect_t));
   cReq->data = ctx;
 
@@ -110,6 +113,5 @@ int main () {
 
   runLoop();
 
-  usleep(1000000);
   return 0;
 }

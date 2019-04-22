@@ -16,7 +16,7 @@ namespace uv_secnet {
   class Buffer {
     public:
       char* base;
-      const int len;
+      int len;
 
       Buffer(const uv_buf_t* uvBuf);
       Buffer(char* base, int len);

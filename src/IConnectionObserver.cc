@@ -19,8 +19,8 @@ void IConnectionObserver::onConnectionClosed() {
   std::cout << "Connection Closed" << std::endl;
 }
 
-void IConnectionObserver::onConnectionError() {
-  std::cout << "Connection Error" << std::endl;
+void IConnectionObserver::onConnectionError(std::string error) {
+  std::cout << "Connection Error: " << error << std::endl;
 }
 
 void IConnectionObserver::onConnectionFinished() {

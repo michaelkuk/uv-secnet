@@ -7,15 +7,13 @@
 
 #pragma once
 
+#include "IConnection.hh"
+#include "IConnectionObserver.hh"
+
 namespace uv_secnet
 {
-  class IConnectionTransform {
+  class IConnectionTransform : public IConnection, public IConnectionObserver {
     public:
-      virtual ~IConnectionTransform() = 0;
-      virtual void initialize() = 0;
-      virtual void transformWrite() = 0;
-      virtual void transformRead() = 0;
-      virtual void finalizeRead() = 0;
-      virtual void closeWrite() = 0;
+      virtual ~IConnectionTransform() {};
   };
 } // namespace uv_secnet

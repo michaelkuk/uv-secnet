@@ -7,6 +7,8 @@
 
 #include "uv_secnet/Buffer.hh"
 #include "uv_secnet/IConnectionObserver.hh"
+#include "uv_secnet/IConnection.hh"
+#include "uv_secnet/IConnectionTransform.hh"
 #include "uv_secnet/TCPConnection.hh"
 #include "uv_secnet/TLSContext.hh"
-#include "uv_secnet/TLSConnection.hh"
+#include "uv_secnet/TLSTransform.hh"

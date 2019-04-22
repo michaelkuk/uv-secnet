@@ -10,20 +10,18 @@
 
 using namespace uv_secnet;
 
-TCPConnection::TCPConnection(uv_stream_t* uvStream, IConnectionObserver* observer)
+TCPConnection::TCPConnection(uv_stream_t* uvStream)
   : isClosed(false),
     isFinished(false),
     uvStream(uvStream),
-    observer(observer)
+    observer(nullptr)
 {
-  std::cout << "Start reading" << std::endl;
   uvStream->data = this;
-  uv_read_start(uvStream, TCPConnection::read_alloc_cb, TCPConnection::read_cb);
 }
 
-std::shared_ptr<TCPConnection> TCPConnection::create(uv_stream_t* uvStream, IConnectionObserver* observer)
+std::shared_ptr<TCPConnection> TCPConnection::create(uv_stream_t* uvStream)
 {
-  return std::shared_ptr<TCPConnection>(new TCPConnection(uvStream, observer));
+  return std::shared_ptr<TCPConnection>(new TCPConnection(uvStream));
 }
 
 TCPConnection::~TCPConnection()
@@ -34,11 +32,20 @@ TCPConnection::~TCPConnection()
   }
 }
 
-void TCPConnection::write(char* data, size_t len)
+void TCPConnection::initialize(IConnectionObserver* obs)
+{
+  observer = obs;
+  uv_read_start(uvStream, TCPConnection::read_alloc_cb, TCPConnection::read_cb);
+  observer->onConnectionOpen();
+}
+
+void TCPConnection::write(buffer_ptr_t data)
 { 
   uv_buf_t* buff = safe_alloc<uv_buf_t>();
-  buff->base = data;
-  buff->len = len;
+  buff->base = safe_alloc<char>(data->len);
+  buff->len = data->len;
+
+  memcpy(buff->base, data->base, data->len);
 
   tcp_write_ctx_t* writeCtx = safe_alloc<tcp_write_ctx_t>();
   writeCtx->connection = this;
@@ -91,8 +98,13 @@ void TCPConnection::onClose()
 void TCPConnection::onWrite(int status)
 {
   if (status != 0) {
-    observer->onConnectionError();
+    onError(status);
   }
+}
+
+void TCPConnection::onError(int status)
+{
+  observer->onConnectionError(std::string(uv_err_name(status)));
 }
 
 void TCPConnection::onDestroy()
@@ -113,6 +125,9 @@ void TCPConnection::read_cb(uv_stream_t* stream, ssize_t nread, const uv_buf_t* 
 
   if (nread > 0) {
     conn->onData(Buffer::makeShared(buf));
+  } else if (nread < 0) {
+    conn->observer->onConnectionError(std::string("Network error, bytes read: ") + std::to_string(nread));
+    free(buf->base);
   } else {
     conn->onFinish();
     free(buf->base);

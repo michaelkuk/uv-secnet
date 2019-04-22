@@ -13,21 +13,23 @@
 #include <uv.h>
 
 #include "IConnectionObserver.hh"
+#include "IConnection.hh"
 #include "util.hh"
 
 namespace uv_secnet {
-  class TCPConnection {
+  class TCPConnection : public IConnection {
     public:
       typedef std::function<uv_buf_t* (uv_buf_t*, TCPConnection*)> write_transform_t;
       typedef std::function<buffer_ptr_t (buffer_ptr_t, TCPConnection*)> read_transform_t;
 
-      ~TCPConnection();
+      virtual ~TCPConnection() override;
 
-      virtual void close();
-      virtual void destroy();
-      virtual void write(char*, size_t);
+      virtual void close() override;
+      virtual void destroy() override;
+      virtual void initialize(IConnectionObserver*) override;
+      virtual void write(buffer_ptr_t) override;
     
-      static std::shared_ptr<TCPConnection> create(uv_stream_t* uvStream, IConnectionObserver* observer);
+      static std::shared_ptr<TCPConnection> create(uv_stream_t* uvStream);
 
     protected:
       bool isClosed;
@@ -39,12 +41,13 @@ namespace uv_secnet {
       std::vector<read_transform_t> readTransforms;
 
       TCPConnection();
-      TCPConnection(uv_stream_t* uvStream, IConnectionObserver* observer);
+      TCPConnection(uv_stream_t* uvStream);
 
       virtual void onData(buffer_ptr_t);
       virtual void onFinish();
       virtual void onClose();
       virtual void onWrite(int);
+      virtual void onError(int);
       virtual void onDestroy();
 
       static void read_alloc_cb(uv_handle_t* handle, size_t suggested_size, uv_buf_t* buf);

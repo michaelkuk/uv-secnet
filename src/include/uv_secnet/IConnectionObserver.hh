@@ -7,13 +7,15 @@
 
 #pragma once
 
+#include <string>
 #include "Buffer.hh"
 
 namespace uv_secnet {
   class IConnectionObserver {
     public:
+      virtual ~IConnectionObserver() {};
       virtual void onConnectionData(buffer_ptr_t data);
-      virtual void onConnectionError();
+      virtual void onConnectionError(std::string);
       virtual void onConnectionFinished();
       virtual void onConnectionClosed();
       virtual void onConnectionDestroyed();
