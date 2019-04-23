@@ -12,6 +12,8 @@
 #include <memory>
 #include <uv.h>
 
+#include "util.hh"
+
 namespace uv_secnet {
   class Buffer {
     public:
@@ -24,6 +26,7 @@ namespace uv_secnet {
 
       static std::shared_ptr<Buffer> makeShared(const uv_buf_t* uvBuf);
       static std::shared_ptr<Buffer> makeShared(char* base, int len);
+      static std::shared_ptr<Buffer> makeShared(size_t size);
     private:
       Buffer();
   };

@@ -34,3 +34,8 @@ std::shared_ptr<Buffer> Buffer::makeShared(char* base, int len)
 {
   return std::make_shared<Buffer>(base, len);
 }
+
+std::shared_ptr<Buffer> Buffer::makeShared(size_t size)
+{
+  return std::make_shared<Buffer>(safe_alloc<char>(size), size);
+}
