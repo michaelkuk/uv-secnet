@@ -29,7 +29,7 @@ void HTTPObject::encodeHeaders(std::ostringstream& ss)
   ss << "Host: " << url->host << ":" << url->port << CRLF;
 
   if (url->hasUserinfo) {
-    ss << "Authorization: Basic " << uv_secnet::base64_encode(url->userinfo) << CRLF;
+    ss << "Authorization: Basic " << uv_secnet::vendor::base64_encode(url->userinfo) << CRLF;
   }
 
   for (auto const& x : headers) {
