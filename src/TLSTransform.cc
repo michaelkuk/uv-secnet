@@ -2,6 +2,8 @@
 
 using namespace uv_secnet;
 
+bool TLSTransform::debug = false;
+
 TLSTransform::TLSTransform(std::shared_ptr<IConnection> connection, SSL* ssl)
   : connection(connection),
     ssl(ssl),
@@ -99,6 +101,10 @@ void TLSTransform::write(buffer_ptr_t data)
 
 void TLSTransform::initialize(IConnectionObserver* obs)
 {
+  if (TLSTransform::debug) {
+    setDebugMode();
+  }
+
   observer = obs;
   connection->initialize(this);
 }

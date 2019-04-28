@@ -17,6 +17,10 @@ else()
     SET(CMAKE_CXX_STANDARD_REQUIRED ON)
 endif()
 
+# IF (NOT WIN32)
+#   remove_definitions(-D_WIN32)
+# ENDIF()
+
 file(GLOB SRC_FILES "src/*.cc")
 file(GLOB HEADER_FILES "src/include/uv_secnet/*.hh")
 file(GLOB MAIN_HEADERS "src/include/*.hh")
@@ -33,10 +37,18 @@ else()
 endif()
 
 add_library(uv_secnet SHARED ${SRC_FILES})
-target_link_libraries(uv_secnet ${LIB_DEPENDENCIES})
+set_property(TARGET uv_secnet PROPERTY POSITION_INDEPENDENT_CODE ON)
 set_target_properties(uv_secnet PROPERTIES SOVERSION 1)
-
 target_include_directories(uv_secnet PUBLIC
+  $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/src/include>
+  $<INSTALL_INTERFACE:include>
+)
+
+add_library(uv_secnet_static STATIC ${SRC_FILES})
+set_property(TARGET uv_secnet_static PROPERTY POSITION_INDEPENDENT_CODE ON)
+set_target_properties(uv_secnet_static PROPERTIES OUTPUT_NAME uv_secnet)
+
+target_include_directories(uv_secnet_static PUBLIC
   $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/src/include>
   $<INSTALL_INTERFACE:include>
 )

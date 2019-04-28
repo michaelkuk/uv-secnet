@@ -40,6 +40,8 @@ namespace uv_secnet
       void setClientMode();
       void setDebugMode();
 
+      static bool debug;
+
     private:
       std::shared_ptr<IConnection> connection;
       SSL* ssl;

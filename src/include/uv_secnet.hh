@@ -15,3 +15,6 @@
 #include "uv_secnet/TLSTransform.hh"
 #include "uv_secnet/HttpObjectBody.hh"
 #include "uv_secnet/HttpObject.hh"
+#include "uv_secnet/IClient.hh"
+#include "uv_secnet/IClientObserver.hh"
+#include "uv_secnet/TCPClient.hh"

@@ -10,6 +10,7 @@
 #include <memory.h>
 #include <string>
 #include <random>
+#include <arpa/inet.h>
 
 #include "vendor/base64.hh"
 
@@ -51,4 +52,22 @@ namespace uv_secnet
       b[i] = static_cast<char>(dist(rd) & 0xFF);
     }
   }
+
+  inline bool isIPv4(const std::string& str)
+  {
+    struct sockaddr_in sa;
+    return inet_pton(AF_INET, str.c_str(), &(sa.sin_addr)) != 0;
+  }
+
+  inline bool isIPv6(const std::string& str)
+  {
+    struct sockaddr_in6 sa;
+    return inet_pton(AF_INET6, str.c_str(), &(sa.sin6_addr)) != 0;
+  }
+
+  inline bool isIPAddress(const std::string& str)
+  {
+    return isIPv4(str) || isIPv6(str);
+  }
+
 } // namespace uv_secnet
