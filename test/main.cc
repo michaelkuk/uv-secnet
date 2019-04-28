@@ -7,6 +7,7 @@
 #include <uv.h>
 #include <memory.h>
 #include <memory>
+#include <http_parser.h>
 
 
 typedef struct {
@@ -80,9 +81,18 @@ void connectCb(uv_connect_t* req, int status) {
 
     auto ssl_ctx = uv_secnet::TLSContext::getDefault();
 
-    ctx->conn = ssl_ctx->secureClientConnection(uv_secnet::TCPConnection::create((uv_stream_t*)req->handle), "google.com");
+    // ctx->conn = ssl_ctx->secureClientConnection(uv_secnet::TCPConnection::create((uv_stream_t*)req->handle), "google.com");
+    ctx->conn = uv_secnet::TCPConnection::create((uv_stream_t*)req->handle);
     ctx->conn->initialize(ctx->obs);
-    uv_timer_start(ctx->timer, timerTick, 1500, 500);
+
+    uv_secnet::HTTPObject obj("http://locahost:9999/post");
+    obj.setHeader("Connection", "Upgrade")
+      ->setHeader("Upgrade", "websocket")
+      ->setHeader("Sec-WebSocket-Key", "2BMqVIxuwA32Yuh1ydRutw==")
+      ->setHeader("Sec-WebSocket-Version", "13");
+    
+    ctx->conn->write(obj.toBuffer());
+    ctx->conn->close();
   }
 
   free(req);
@@ -106,11 +116,107 @@ void runLoop() {
   freeCtx(ctx);
 }
 
+void testUri(std::string url) {
+  auto uri = uv_secnet::Url::parse(url);
+  return;
+}
+
+void on_addr_info(uv_getaddrinfo_t* req, int status, struct addrinfo* res)
+{
+  auto i4 = AF_INET;
+  auto i6 = AF_INET6;
+
+  if (status != 0) {
+    char e[1024];
+
+    uv_err_name_r(status, e, 1024);
+    std::cout << e << std::endl;
+    return;
+  }
+
+  if (res->ai_family == AF_INET) {
+    std::cout << inet_ntoa(((sockaddr_in*)res->ai_addr)->sin_addr) << 
+      ":" <<
+      ((sockaddr_in*)res->ai_addr)->sin_port << std::endl;
+  }
+  std::cout << "DONE!" << std::endl;
+}
+
+class LogObserver : public uv_secnet::IClientObserver {
+  public:
+    uv_secnet::HTTPObject* o;
+    uv_secnet::TCPClient* c;
+
+    LogObserver() : o(nullptr), c(nullptr) {};
+
+    virtual void onClientStatusChanged(uv_secnet::IClient::STATUS status) {
+      std::cout << "Client status changed" << std::endl;
+    };
+        // <0 - do not reconnect, 0 - reconnect now, >0 - reconnect delay
+    virtual int onClientError(uv_secnet::IClient::ERR, std::string err)
+    {
+      std::cout << "Error: " << err << std::endl;
+    }
+
+    virtual void onClientData(uv_secnet::buffer_ptr_t data)
+    {
+      // std::cout << "Got data::" << std::endl << std::string(data->base, data->len) << std::endl;
+    }
+
+    virtual void onClientConnectionStatusChanged(uv_secnet::IClient::CONNECTION_STATUS status)
+    {
+      if (status == uv_secnet::IClient::CONNECTION_STATUS::OPEN) {
+        std::cout << "Connected" << std::endl;
+        c->send(o->toBuffer());
+        c->close();
+      }
+      std::cout << "Connection status changed" << std::endl;
+    }
+
+};
 
 int main () {
-  std::cout << "hello, world!" << std::endl;
+  // std::string s("https://admin:fickmich@localhost:443/something?query=string");
 
-  runLoop();
+  // runLoop();
+
+  // auto buf = uv_secnet::safe_alloc<char>(16);
+  // uv_secnet::randomBytes(buf, 16);
+  // auto data = uv_secnet::vendor::base64_encode((unsigned char*)buf, 16);
+
+  // std::string body("Text payload, yeah baby!");
+  // auto buf = uv_secnet::Buffer::makeShared(const_cast<char*>(body.c_str()), body.length());
+  
+  // uv_secnet::HTTPObject obj(s);
+  // obj.createBody("text/plain", buf)
+  //   ->setHeader("X-Auth-Token", "trlalala")
+  //   ->setHeader("User-Agent", "fucking_C++_baby!");
+
+  // auto b = obj.toBuffer();
+
+  // // std::cout << std::string(d, one.length() + two.length());
+  // std::cout << std::string(b->base, b->len);
+  // std::cout << data << std::endl;
+
+  uv_loop_t* loop = uv_default_loop();
+
+  // uv_secnet::TLSTransform::debug = true;
+
+  std::string host("https://google.com:443/");
+  LogObserver o;
+
+  uv_secnet::TCPClient client(loop, host, &o);
+  auto httpO = uv_secnet::HTTPObject(host);
+  httpO.setHeader("User-Agent", "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Ubuntu Chromium/73.0.3683.86 Chrome/73.0.3683.86 Safari/537.36");
+  httpO.setHeader("Accept", "text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,image/apng,*/*;q=0.8");
+
+  o.o = &httpO;
+  o.c = &client;
+
+  client.enableTLS();
+  client.connect();
+
+  uv_run(loop, UV_RUN_DEFAULT);
 
   return 0;
 }
